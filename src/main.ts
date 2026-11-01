@@ -7,6 +7,8 @@ import { CatalogueCache } from "./discover.ts";
 import { createEditorExtension, progressEffect } from "./editor-extension.ts";
 import { createProgressProcessor, patchPlaceholderTitle } from "./progress.ts";
 import { Summariser } from "./summariser.ts";
+import { countNoteActivity } from "./activity.ts";
+import { FileExplorerActivity } from "./file-explorer-activity.ts";
 import { newRegion } from "./writer.ts";
 import {
 	AiOverviewSettings,
@@ -23,6 +25,7 @@ export default class AiOverviewPlugin extends Plugin {
 
 	summariser!: Summariser;
 	commentJobs!: CommentJobs;
+	private fileActivity?: FileExplorerActivity;
 
 	async onload(): Promise<void> {
 		await this.loadSettings();
@@ -36,6 +39,15 @@ export default class AiOverviewPlugin extends Plugin {
 		this.register(this.summariser.onChange(() => this.repaintProgress()));
 
 		await this.startCommentBridge();
+		this.fileActivity = this.addChild(new FileExplorerActivity(this.app,
+			() => this.settings.showFileExplorerActivity,
+			() => countNoteActivity([
+				...this.summariser.activity(), ...(this.commentJobs?.activity() ?? []),
+			].filter((run) => this.app.vault.getAbstractFileByPath(run.notePath) instanceof TFile)),
+		));
+		this.fileActivity.load();
+		this.register(this.summariser.onChange(() => this.fileActivity?.refresh()));
+		if (this.commentJobs) this.register(this.commentJobs.subscribe(() => this.fileActivity?.refresh()));
 		this.addSettingTab(new AiOverviewSettingTab(this.app, this));
 
 		this.addCommand({
@@ -216,6 +228,7 @@ export default class AiOverviewPlugin extends Plugin {
 
 	async saveSettings(): Promise<void> {
 		await this.saveData(this.settings);
+		this.fileActivity?.refresh();
 		if (this.commentJobs && this.commentJobs.tag !== this.settings.agentNameTag) {
 			this.commentJobs.configure(this.settings.agentNameTag);
 			(this.app.workspace as Events).trigger(BRIDGE_CHANGED);

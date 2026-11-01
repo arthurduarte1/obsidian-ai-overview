@@ -36,9 +36,22 @@ function fixture() {
 test("indexing settings never launches model discovery", () => {
 	const f = fixture();
 	const definitions = f.tab.getSettingDefinitions();
-	assert.equal(definitions.length, 8);
+	assert.equal(definitions.length, 9);
 	assert.equal(f.loads(), 0);
 	assert.ok(definitions.every((definition) => definition.name));
+});
+
+test("Files activity toggle saves immediately without refreshing notes or discovering models", async () => {
+	const f = fixture(); let change, saved = 0;
+	f.plugin.saveSettings = async () => { saved++; };
+	f.plugin.refreshViews = () => assert.fail("the toggle must not trigger generation");
+	const toggle = { setValue(value) { assert.equal(value, true); return this; }, onChange(fn) { change = fn; return this; } };
+	f.tab.getSettingDefinitions().find(definition => definition.name === "Show agent activity in Files")
+		.render({ addToggle(fn) { fn(toggle); } });
+	await change(false);
+	assert.equal(f.plugin.settings.showFileExplorerActivity, false);
+	assert.equal(saved, 1);
+	assert.equal(f.loads(), 0);
 });
 
 test("Pi provider can be selected without discarding another CLI's settings", async () => {

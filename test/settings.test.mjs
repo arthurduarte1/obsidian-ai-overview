@@ -26,3 +26,12 @@ test("malformed nested values cannot leak into CLI arguments", () => {
 	assert.deepEqual(value, DEFAULT_SETTINGS);
 	assert.equal(mergeSettings({ timeoutSeconds: 1.2 }).timeoutSeconds, 300);
 });
+
+test("Files activity is enabled by default and only accepts persisted booleans", () => {
+	assert.equal(mergeSettings({}).showFileExplorerActivity, true);
+	assert.equal(mergeSettings({ showFileExplorerActivity: false }).showFileExplorerActivity, false);
+	assert.equal(mergeSettings({ showFileExplorerActivity: true }).showFileExplorerActivity, true);
+	for (const value of ["false", 0, null, {}, []]) {
+		assert.equal(mergeSettings({ showFileExplorerActivity: value }).showFileExplorerActivity, true);
+	}
+});

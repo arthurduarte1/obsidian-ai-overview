@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { CommentJobs, parseSavedJobs } from "../src/comment-jobs.ts";
+import { countNoteActivity } from "../src/activity.ts";
 
 const request = (id = "one") => ({ id, source: "comment-block", notePath: "Note.md", commentId: id, message: "@teddy help", quote: null, thread: [] });
 async function until(predicate) {
@@ -20,6 +21,46 @@ function fixture(overrides = {}, saved = []) {
 	const detach = jobs.attach("comment-block", host);
 	return { jobs, host, published, applied, snapshots, detach, runs: () => runs, state: (id = "one") => jobs.jobs("comment-block", "Note.md").find((j) => j.request.id === id)?.state };
 }
+
+test("activity combines both comment sources through queue, execution, publication and completion", async () => {
+	let finishRun, finishPublication;
+	const f = fixture({ launch: () => ({ result: new Promise(resolve => { finishRun = resolve; }), cancel() {} }) });
+	f.jobs.attach("inline-review-comment", f.host);
+	f.host.publish = () => new Promise(resolve => { finishPublication = resolve; });
+	await f.jobs.submit(request()); await until(() => !!finishRun);
+	await f.jobs.submit({ ...request("two"), source: "inline-review-comment" });
+	assert.deepEqual(countNoteActivity(f.jobs.activity()).get("Note.md"), { queued: 1, running: 1, publishing: 0 });
+	finishRun({ reply: "Done" }); await until(() => !!finishPublication);
+	assert.deepEqual(countNoteActivity(f.jobs.activity()).get("Note.md"), { queued: 1, running: 0, publishing: 1 });
+	f.jobs.cancel("two");
+	finishPublication(); await until(() => f.state() === "completed");
+	assert.deepEqual(f.jobs.activity(), []);
+});
+
+test("activity follows folder renames and saved-response retries without another agent launch", async () => {
+	let finishPublication;
+	const f = fixture();
+	f.host.publish = async () => { throw new Error("Posting failed"); };
+	await f.jobs.submit(request()); await until(() => f.state() === "failed");
+	assert.deepEqual(f.jobs.activity(), []);
+	f.jobs.rename("Note.md", "Folder/Note.md");
+	f.host.publish = () => new Promise(resolve => { finishPublication = resolve; });
+	await f.jobs.retry("one"); await until(() => !!finishPublication);
+	f.jobs.rename("Folder", "Moved");
+	assert.deepEqual(f.jobs.activity(), [{ notePath: "Moved/Note.md", phase: "publishing" }]);
+	assert.equal(f.runs(), 1);
+	finishPublication(); await until(() => f.jobs.activity().length === 0);
+});
+
+test("restored interrupted jobs and stopped managers never retain active badges", async () => {
+	const saved = { request: request(), tag: "teddy", state: "running", outcomes: [] };
+	assert.deepEqual(fixture({}, [saved]).jobs.activity(), []);
+	let reject;
+	const f = fixture({ launch: () => ({ result: new Promise((_resolve, no) => { reject = no; }), cancel() { reject(new Error("Cancelled")); } }) });
+	await f.jobs.submit(request()); await until(() => !!reject);
+	f.jobs.stop();
+	assert.deepEqual(f.jobs.activity(), []);
+});
 
 test("a submitted comment runs once across repeated submissions and restarts", async () => {
 	const f = fixture();

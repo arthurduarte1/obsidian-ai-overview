@@ -6,6 +6,7 @@ type ByProvider = Record<ProviderId, string>;
 
 export interface AiOverviewSettings {
 	agentNameTag: string;
+	showFileExplorerActivity: boolean;
 	/** Which CLI generates overviews. */
 	provider: ProviderId;
 	/** Executable name or absolute path, per provider. */
@@ -24,6 +25,7 @@ export interface AiOverviewSettings {
 
 export const DEFAULT_SETTINGS: AiOverviewSettings = {
 	agentNameTag: "",
+	showFileExplorerActivity: true,
 	provider: "codex",
 	paths: { codex: "codex", claude: "claude", opencode: "opencode", pi: "pi" },
 	models: { codex: "", claude: "", opencode: "", pi: "" },
@@ -55,6 +57,8 @@ export function mergeSettings(raw: unknown): AiOverviewSettings {
 	const data = asRecord(raw);
 	const settings: AiOverviewSettings = {
 		agentNameTag: normalizeTag(data.agentNameTag),
+		showFileExplorerActivity: typeof data.showFileExplorerActivity === "boolean"
+			? data.showFileExplorerActivity : DEFAULT_SETTINGS.showFileExplorerActivity,
 		provider: PROVIDER_IDS.includes(data.provider as ProviderId) ? data.provider as ProviderId : DEFAULT_SETTINGS.provider,
 		paths: providerValues(data.paths, DEFAULT_SETTINGS.paths, true),
 		models: providerValues(data.models, DEFAULT_SETTINGS.models),

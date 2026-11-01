@@ -1,5 +1,58 @@
 /* ── AI Overview ──────────────────────────────────────────────────────────── */
 
+/* Own only the appended badge, leaving explorer icons and selection alone. */
+.aio-file-activity {
+	display: inline-flex;
+	align-items: center;
+	flex: 0 0 auto;
+	gap: var(--size-2-2);
+	margin-inline-start: auto;
+	padding: 0 var(--size-2-2);
+	border-radius: var(--radius-s);
+	background: var(--background-modifier-hover);
+	color: var(--text-accent);
+	font-size: var(--font-smallest);
+	line-height: 1.6;
+	white-space: nowrap;
+}
+
+.aio-file-activity-dots {
+	display: inline-flex;
+	align-items: center;
+	gap: 2px;
+}
+
+.aio-file-activity-dots > span {
+	width: 3px;
+	height: 3px;
+	border-radius: 50%;
+	background: currentColor;
+	opacity: 0.6;
+}
+
+.aio-file-activity[data-aio-state="active"] .aio-file-activity-dots > span {
+	animation: aio-file-activity-dots 1.25s ease-in-out infinite;
+}
+
+.aio-file-activity[data-aio-state="active"] .aio-file-activity-dots > span:nth-child(2) {
+	animation-delay: 0.15s;
+}
+
+.aio-file-activity[data-aio-state="active"] .aio-file-activity-dots > span:nth-child(3) {
+	animation-delay: 0.3s;
+}
+
+@keyframes aio-file-activity-dots {
+	0%, 65%, 100% { transform: translateY(0); opacity: 0.5; }
+	30% { transform: translateY(-2px); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.aio-file-activity[data-aio-state="active"] .aio-file-activity-dots > span {
+		animation: none;
+	}
+}
+
 /*
  * The prompt callout. Obsidian renders unknown callout types with a default icon
  * and colour, so both are set here.

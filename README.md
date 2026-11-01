@@ -98,6 +98,24 @@ the note's Markdown after AI Overview is disabled.
 See [agent mention behavior and compatibility](docs/agent-mentions.md) for the
 CLI permissions, compatibility and recovery details.
 
+## Agent activity in Files
+
+An **AI** badge appears beside notes with queued or active work from AI callouts,
+Discussions, or Inline Review Comments. Its three dots animate while the agent
+runs or its result is being saved; queued work has static dots. Hover over the
+badge for queued, running, and publishing request counts.
+
+Activity inside collapsed folders appears on the nearest visible collapsed
+folder. **AI 2**, for example, means two notes have pending work, regardless of
+how many requests each note has. Expanding the folder moves the badges to the
+visible notes or deeper collapsed folders.
+
+Badges use a separate space after the filename, preserving file icons and normal
+navigation. They respect reduced-motion preferences and disappear when work
+finishes, fails, or is cancelled. Disable **Settings → AI Overview → Show agent
+activity in Files** to hide them without stopping work. Activity is local to the
+running vault instance and is never written into note properties.
+
 ## Requirements
 
 - **Obsidian desktop.** The manifest declares Obsidian 1.13.0 or later. Generation

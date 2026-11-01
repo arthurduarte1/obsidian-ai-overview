@@ -1,6 +1,7 @@
 import type { AgentBridge, CommentHost, CommentSource, MentionJob, MentionRequest } from "./agent-bridge.ts";
 import type { CommentReply, CommentResult, NoteChange } from "./comment-output.ts";
 import { parseCommentReply, parseCommentResult } from "./comment-output.ts";
+import type { ActivityRun } from "./activity.ts";
 
 export interface SavedJob extends MentionJob {
 	mode?: "direct" | "legacy";
@@ -84,6 +85,13 @@ export class CommentJobs implements AgentBridge {
 	}
 	jobs(source: CommentSource, notePath: string): SavedJob[] {
 		return [...this.records.values()].filter((j) => j.request.source === source && j.request.notePath === notePath);
+	}
+	/** Internal snapshot; intentionally absent from the versioned comment bridge. */
+	activity(): readonly ActivityRun[] {
+		return [...this.records.values()].filter(active).map((job) => ({
+			notePath: job.request.notePath,
+			phase: job.state === "applying" ? "publishing" : job.state === "running" ? "running" : "queued",
+		}));
 	}
 	subscribe(listener: () => void): () => void {
 		this.listeners.add(listener);

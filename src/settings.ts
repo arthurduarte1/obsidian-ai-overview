@@ -26,6 +26,17 @@ export class AiOverviewSettingTab extends PluginSettingTab {
 		const catalogue = this.plugin.catalogue.peek(active, command);
 		return [
 			{
+				name: "Show agent activity in Files",
+				desc: "Show AI badges for queued and running work beside notes and collapsed folders in Files.",
+				render: (setting) => {
+					setting.addToggle((toggle) => toggle.setValue(this.plugin.settings.showFileExplorerActivity)
+						.onChange(async (value) => {
+							this.plugin.settings.showFileExplorerActivity = value;
+							await this.plugin.saveSettings();
+						}));
+				},
+			},
+			{
 				name: "Agent name tag",
 				desc: "Mention this agent in the Obsidian Discussions or Obsidian Inline Review Comments plugin to request work using the CLI's configured permissions, tools and integrations. Changes take effect directly; retries may repeat actions. Additional permission must be configured outside Obsidian. Leave blank to disable. No spaces. Letters, numbers, underscores and hyphens; start with a letter.",
 				render: (setting) => {

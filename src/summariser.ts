@@ -9,6 +9,7 @@ import {
 } from "./parser.ts";
 import { upsertSummary } from "./writer.ts";
 import type AiOverviewPlugin from "./main.ts";
+import { CalloutActivity, type ActivityRun } from "./activity.ts";
 
 export type CalloutState = "running" | "failed" | "idle";
 
@@ -43,6 +44,7 @@ export class Summariser {
 	private progress = new Map<string, string>();
 	private listeners = new Set<() => void>();
 	private statusEl: HTMLElement | null = null;
+	private activityRuns = new CalloutActivity();
 
 	constructor(plugin: AiOverviewPlugin) {
 		this.plugin = plugin;
@@ -75,6 +77,7 @@ export class Summariser {
 		for (const run of this.running.values()) run.cancel();
 		this.running.clear();
 		this.progress.clear();
+		this.activityRuns.clear();
 		this.listeners.clear();
 		document.body.classList.remove("aio-busy");
 	}
@@ -85,6 +88,11 @@ export class Summariser {
 		return () => {
 			this.listeners.delete(listener);
 		};
+	}
+
+	/** Every live execution, resolving renamed notes through their file identity. */
+	activity(): readonly ActivityRun[] {
+		return this.activityRuns.snapshot((file) => this.plugin.app.vault.getAbstractFileByPath(file.path) === file);
 	}
 
 	/** The live progress line for a callout, or null when nothing is running. */
@@ -247,12 +255,15 @@ export class Summariser {
 		});
 
 		this.running.set(key, run);
+		const activityId = this.activityRuns.begin(file);
 		this.progress.set(key, "Starting…");
 		this.paintStatus();
 		this.notify();
 
 		try {
 			const result = await run.result;
+			this.activityRuns.publishing(activityId);
+			this.notify();
 			await this.plugin.app.vault.process(file, (current) => {
 				// Recomputed against the note as it is now, so an edit made while the
 				// agent was working can't be clobbered.
@@ -267,12 +278,15 @@ export class Summariser {
 			});
 		} catch (err) {
 			const message = err instanceof Error ? err.message : String(err);
-			this.failed.set(key, message);
+			if (this.running.get(key) === run) this.failed.set(key, message);
 			log(`${file.path}: ${message}`);
 			if (message !== "Cancelled.") new Notice(`AI Overview: ${message}`, 10_000);
 		} finally {
-			this.running.delete(key);
-			this.progress.delete(key);
+			this.activityRuns.finish(activityId);
+			if (this.running.get(key) === run) {
+				this.running.delete(key);
+				this.progress.delete(key);
+			}
 			this.paintStatus();
 			this.notify();
 		}
