@@ -1,3 +1,9 @@
+## [4.2.0](https://github.com/deepal/obsidian-ai-overview/compare/4.1.1...4.2.0) (2026-11-01)
+
+### Features
+
+* show agent activity badges in files ([9d1bc72](https://github.com/deepal/obsidian-ai-overview/commit/9d1bc7219f4161b64fe9c01023375368fbe13a71))
+
 ## [4.1.1](https://github.com/deepal/obsidian-ai-overview/compare/4.1.0...4.1.1) (2026-10-25)
 
 ### Bug Fixes
